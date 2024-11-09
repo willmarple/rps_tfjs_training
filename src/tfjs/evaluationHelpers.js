@@ -113,6 +113,7 @@ export const showExamples = async data => {
   // Create canvas elements and display images
   for (let i = 0; i < numExamples; i++) {
     const imageTensor = tf.tidy(() => {
+      // Get the tensor for this specific image and reshape correctly
       return examples.xs
         .slice([i, 0], [1, examples.xs.shape[1]])
         .reshape([IMAGE_WIDTH, IMAGE_HEIGHT, NUM_CHANNELS])
@@ -123,8 +124,8 @@ export const showExamples = async data => {
     canvas.height = IMAGE_HEIGHT
     canvas.style = 'width: 100%; aspect-ratio: 1;'
     
-    // Use tf.browser.draw instead of toPixels
-    await tf.browser.draw(imageTensor, canvas)
+    // Use toPixels instead of draw
+    await tf.browser.toPixels(imageTensor, canvas)
     
     surface.drawArea.appendChild(canvas)
     imageTensor.dispose()

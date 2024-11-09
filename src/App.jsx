@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useEffect } from 'react'
 import Webcam from 'react-webcam'
 import * as tfvis from '@tensorflow/tfjs-vis'
 import * as tf from '@tensorflow/tfjs'
+import '@tensorflow/tfjs-backend-webgl'
 import Editor from '@monaco-editor/react'
 import { RPSDataset } from './tfjs/data.js'
 import { getAdvancedModel, getSimpleModel } from './tfjs/models.js'
@@ -16,6 +17,18 @@ import AdvancedModel from './AdvancedModel.jsx'
 import { Disclosure, DisclosureButton, DisclosurePanel } from '@headlessui/react'
 import "./Buttons.css"
 import "./App.css"
+import gant from "./corn.png";
+import {
+  IMAGE_WIDTH,
+  IMAGE_HEIGHT,
+  NUM_CHANNELS,
+  NUM_CLASSES,
+  TEST_BATCH_SIZE
+} from './tfjs/constants'
+
+// Set up WebGL backend before any TF operations
+await tf.setBackend('webgl')
+console.log('Using backend:', tf.getBackend())
 
 const simpleModelCode = `
 export const getSimpleModel = () => {
@@ -125,6 +138,7 @@ function App() {
   const [camMessage, setCamMessage] = useState('')
   const [advancedDemo, setAdvancedDemo] = useState(false)
   const [loadDataMessage, setLoadDataMessage] = useState('Load and Show Examples')
+  const [isVisorOpen, setIsVisorOpen] = useState(false)
 
   // Refs
   const webcamRef = useRef(null)
@@ -156,30 +170,52 @@ function App() {
     modelRef.current = model
   }, [])
 
-  const handleCreateAdvancedModel = useCallback(async () => {
+  const handleCreateAdvancedModel = useCallback(() => {
+    // Create model
+    modelRef.current = getAdvancedModel()
     setCurrentModel('Advanced')
-    const model = getAdvancedModel()
+
+    // Show model summary in visor
+    const visor = tfvis.visor()
+    visor.open()
+    setIsVisorOpen(true)
+    
     tfvis.show.modelSummary(
-      { name: 'Advanced Model Architecture' },
-      model
+      { name: 'Advanced Model Architecture', tab: 'Model' },
+      modelRef.current
     )
-    modelRef.current = model
   }, [])
 
-  const handleCheckUntrained = useCallback(async () => {
-    if (!dataRef.current || !modelRef.current) {
-      alert('Please load data and create a model first')
+  const handleCheckUntrainedModel = useCallback(async () => {
+    if (!modelRef.current || !dataRef.current) {
+      alert('Please create a model and load data first')
       return
     }
 
-    // Make sure the visor is open
-    tfvis.visor().open()
-    
-    // Show accuracy metrics
-    await showAccuracy(modelRef.current, dataRef.current)
-    
-    // Show confusion matrix
-    await showConfusion(modelRef.current, dataRef.current, 'Untrained Matrix')
+    try {
+      // Make sure visor is open
+      const visor = tfvis.visor()
+      visor.open()
+      setIsVisorOpen(true)
+
+      // Show confusion matrix and accuracy for untrained model
+      const testData = {
+        nextTestBatch: (batchSize) => {
+          const batch = dataRef.current.nextTestBatch(batchSize)
+          return {
+            xs: batch.xs.reshape([batchSize, IMAGE_WIDTH, IMAGE_HEIGHT, NUM_CHANNELS]),
+            labels: batch.labels
+          }
+        }
+      }
+
+      await showAccuracy(modelRef.current, testData)
+      await showConfusion(modelRef.current, testData)
+
+    } catch (error) {
+      console.error('Error checking untrained model:', error)
+      alert('Error checking untrained model: ' + error.message)
+    }
   }, [])
 
   const handleTrainModel = useCallback(async () => {
@@ -193,10 +229,10 @@ function App() {
 
     // Different number of epochs based on model type
     const numEpochs = currentModel === 'Simple' ? 12 : 20
-    
+
     try {
       await train(modelRef.current, dataRef.current, numEpochs)
-      
+
       // After training, show the updated metrics
       await showAccuracy(modelRef.current, dataRef.current, 'Trained Accuracy')
       await showConfusion(modelRef.current, dataRef.current, 'Trained Confusion Matrix')
@@ -327,7 +363,7 @@ function App() {
           <div className="GroupUp">
             <button
               className="btn-3d blue"
-              onClick={handleCheckUntrained}
+              onClick={handleCheckUntrainedModel}
             >
               Check Untrained Model Results
             </button>
@@ -347,6 +383,107 @@ function App() {
             </button>
           </div>
         </section>
+      </div>
+      <div className="GroupUp">
+        <p className="outro">
+          Follow me (Gant Laborde) and Infinite Red for cool new experiments,
+          and let us know what cool things you've come up with.{" "}
+          <em>
+            We can help, we're available for AI consulting and{" "}
+            <a
+              href="https://academy.infinite.red/"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              training
+            </a>
+            .
+          </em>
+        </p>
+      </div>
+      <div className="GroupUp">
+        <img src={gant} className="wiggle me" alt="Gant Laborde" />
+        <ul id="footer">
+          <li>
+            Website:{" "}
+            <a
+              href="http://gantlaborde.com"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              GantLaborde.com
+            </a>
+          </li>
+          <li>
+            Twitter:{" "}
+            <a
+              href="https://twitter.com/gantlaborde"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              @GantLaborde
+            </a>
+          </li>
+          <li>
+            Medium:{" "}
+            <a
+              href="https://medium.freecodecamp.org/@gantlaborde"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              GantLaborde
+            </a>
+          </li>
+          <li>
+            ML Twitter:{" "}
+            <a
+              href="https://twitter.com/FunMachineLearn"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              FunMachineLearn
+            </a>
+          </li>
+          <li>
+            GitHub:{" "}
+            <a
+              href="https://github.com/GantMan/rps_tfjs_demo"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              RPS TFJS Demo
+            </a>
+          </li>
+          <li>
+            Newsletter:{" "}
+            <a
+              href="https://ai-fyi.com"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              AI-FYI.com
+            </a>
+          </li>
+          <li>
+            <a
+              href="https://infinite.red"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <img src="./ir.svg" id="InfiniteRed" alt="Infinite Red" />
+            </a>
+          </li>
+        </ul>
+      </div>
+      <div className="GroupUp">
+        <img src="./ml.png" id="closer" alt="RPS" />
+        <h4>powered by</h4>
+        <img
+          src="./TF_FullColor_Horizontal.png"
+          id="closer"
+          alt="Tensorflow logo"
+          style={{ paddingLeft: "-40px" }}
+        />
       </div>
     </div>
   )

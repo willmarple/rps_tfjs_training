@@ -7,4 +7,5 @@ export const NUM_TRAIN_ELEMENTS = 2100
 export const NUM_TEST_ELEMENTS = NUM_DATASET_ELEMENTS - NUM_TRAIN_ELEMENTS
 export const NUM_CHANNELS = 3
 export const BYTES_PER_UINT8 = 4
-export const BATCH_SIZE = 512
+export const BATCH_SIZE = 32
+export const TEST_BATCH_SIZE = 150

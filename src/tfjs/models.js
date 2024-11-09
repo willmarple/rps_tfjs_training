@@ -11,32 +11,68 @@ export const getAdvancedModel = () => {
     name: 'advancedModel'
   })
 
-  // First conv layer - reduced filters
-  model.add(tf.layers.conv2d({
-    inputShape: [IMAGE_WIDTH, IMAGE_HEIGHT, NUM_CHANNELS],
-    kernelSize: 3,
-    filters: 16,
-    activation: 'relu',
-    padding: 'same'
-  }))
-  model.add(tf.layers.maxPooling2d({ poolSize: 2 }))
+  // First conv layer
+  model.add(
+    tf.layers.conv2d({
+      inputShape: [IMAGE_WIDTH, IMAGE_HEIGHT, NUM_CHANNELS],
+      kernelSize: 3,
+      filters: 32,
+      strides: 1,
+      activation: 'relu',
+      kernelInitializer: 'varianceScaling'
+    })
+  )
+  model.add(tf.layers.maxPooling2d({ poolSize: [2, 2], strides: [2, 2] }))
 
-  // Second conv layer - reduced filters
-  model.add(tf.layers.conv2d({
-    kernelSize: 3,
-    filters: 32,
-    activation: 'relu',
-    padding: 'same'
-  }))
-  model.add(tf.layers.maxPooling2d({ poolSize: 2 }))
+  // Second conv layer
+  model.add(
+    tf.layers.conv2d({
+      kernelSize: 3,
+      filters: 64,
+      strides: 1,
+      activation: 'relu',
+      kernelInitializer: 'varianceScaling'
+    })
+  )
+  model.add(tf.layers.maxPooling2d({ poolSize: [2, 2], strides: [2, 2] }))
 
-  // Flatten and dense layers - reduced units
+  // Third conv layer
+  model.add(
+    tf.layers.conv2d({
+      kernelSize: 3,
+      filters: 128,
+      strides: 1,
+      activation: 'relu',
+      kernelInitializer: 'varianceScaling'
+    })
+  )
+  model.add(tf.layers.maxPooling2d({ poolSize: [2, 2], strides: [2, 2] }))
+
+  // Flatten output and feed it into dense layer
   model.add(tf.layers.flatten())
-  model.add(tf.layers.dense({ units: 32, activation: 'relu' }))
-  model.add(tf.layers.dense({ units: NUM_CLASSES, activation: 'softmax' }))
+  model.add(
+    tf.layers.dense({
+      units: 64,
+      kernelInitializer: 'varianceScaling',
+      activation: 'relu'
+    })
+  )
 
+  // Dropout to prevent overfitting
+  model.add(tf.layers.dropout({ rate: 0.5 }))
+
+  // Output layer
+  model.add(
+    tf.layers.dense({
+      units: NUM_CLASSES,
+      kernelInitializer: 'varianceScaling',
+      activation: 'softmax'
+    })
+  )
+
+  const optimizer = tf.train.adam(0.0001)
   model.compile({
-    optimizer: tf.train.adam(0.001),
+    optimizer: optimizer,
     loss: 'categoricalCrossentropy',
     metrics: ['accuracy']
   })
