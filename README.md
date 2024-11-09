@@ -1,8 +1,30 @@
-# React + Vite
+# TensorFlow.js Rock-Paper-Scissors Training
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A demonstration project showing how to train Rock Paper Scissors models directly in the browser using TensorFlow.js. This project showcases model architecture comparison, training visualization, and real-time predictions.
 
-Currently, two official plugins are available:
+## Getting Started
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+### Prerequisites
+- Node.js (v18 or higher)
+- npm
+
+### Installation
+
+1. Clone the repository:
+
+```bash
+git clone https://github.com/willmarple/rps_tfjs_training.git
+cd rps_tfjs_training
+```
+
+2. Install dependencies:
+
+```bash
+npm install
+```
+
+3. Start the development server:
+
+```bash
+npm run dev
+```
