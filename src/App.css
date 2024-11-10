@@ -130,7 +130,7 @@ html {
   justify-content: center;
   color: white;
   font-size: calc(14px + 1vmin);
-  padding: 5px 30px 40px 30px;
+  padding: 0 20px;
   background: linear-gradient(
       231deg,
       rgba(233, 233, 233, 0.01) 0%,
@@ -366,4 +366,29 @@ html {
   100% {
     color: #fff;
   }
+}
+
+.tfjs-vis-surface {
+  max-width: none !important;
+}
+
+.code-disclosure {
+  width: 100%;
+  max-width: 1140px;
+  margin: 0 auto;
+}
+
+section {
+  margin: 40px auto;
+  text-align: center;
+}
+
+section p {
+  text-align: center;
+  max-width: 1140px;
+  margin: 20px auto;
+}
+
+.model-selection {
+  width: 840px;
 }

@@ -34,6 +34,9 @@ const simpleModelCode = `
 export const getSimpleModel = () => {
   const model = tf.sequential()
 
+  // In the first layer of out convolutional neural network we have
+  // to specify the input shape. Then we specify some parameters for
+  // the convolution operation that takes place in this layer.
   model.add(
     tf.layers.conv2d({
       inputShape: [IMAGE_WIDTH, IMAGE_HEIGHT, NUM_CHANNELS],
@@ -45,8 +48,12 @@ export const getSimpleModel = () => {
     })
   )
 
+  // The MaxPooling layer acts as a sort of downsampling using max values
+  // in a region instead of averaging.
   model.add(tf.layers.maxPooling2d({ poolSize: [2, 2], strides: [2, 2] }))
 
+  // Repeat another conv2d + maxPooling stack.
+  // Note that we have more filters in the convolution.
   model.add(
     tf.layers.conv2d({
       kernelSize: 5,
@@ -58,8 +65,13 @@ export const getSimpleModel = () => {
   )
   model.add(tf.layers.maxPooling2d({ poolSize: [2, 2], strides: [2, 2] }))
 
+  // Now we flatten the output from the 2D filters into a 1D vector to prepare
+  // it for input into our last layer. This is common practice when feeding
+  // higher dimensional data to a final classification output layer.
   model.add(tf.layers.flatten())
 
+  // Our last layer is a dense layer which has 3 output units, one for each
+  // output class (i.e. 0, 1, 2).
   const NUM_OUTPUT_CLASSES = 3
   model.add(
     tf.layers.dense({
@@ -69,6 +81,8 @@ export const getSimpleModel = () => {
     })
   )
 
+  // Choose an optimizer, loss function and accuracy metric,
+  // then compile and return the model
   const optimizer = tf.train.adam()
   model.compile({
     optimizer: optimizer,
@@ -81,25 +95,28 @@ export const getSimpleModel = () => {
 
 const advancedModelCode = `
 export const getAdvancedModel = () => {
-  const model = tf.sequential()
+  const model = tf.sequential({
+    name: 'advancedModel'
+  })
 
+  // First conv layer
   model.add(
     tf.layers.conv2d({
       inputShape: [IMAGE_WIDTH, IMAGE_HEIGHT, NUM_CHANNELS],
-      kernelSize: 5,
-      filters: 8,
+      kernelSize: 3,
+      filters: 32,
       strides: 1,
       activation: 'relu',
       kernelInitializer: 'varianceScaling'
     })
   )
-
   model.add(tf.layers.maxPooling2d({ poolSize: [2, 2], strides: [2, 2] }))
 
+  // Second conv layer
   model.add(
     tf.layers.conv2d({
-      kernelSize: 5,
-      filters: 16,
+      kernelSize: 3,
+      filters: 64,
       strides: 1,
       activation: 'relu',
       kernelInitializer: 'varianceScaling'
@@ -107,18 +124,41 @@ export const getAdvancedModel = () => {
   )
   model.add(tf.layers.maxPooling2d({ poolSize: [2, 2], strides: [2, 2] }))
 
-  model.add(tf.layers.flatten())
+  // Third conv layer
+  model.add(
+    tf.layers.conv2d({
+      kernelSize: 3,
+      filters: 128,
+      strides: 1,
+      activation: 'relu',
+      kernelInitializer: 'varianceScaling'
+    })
+  )
+  model.add(tf.layers.maxPooling2d({ poolSize: [2, 2], strides: [2, 2] }))
 
-  const NUM_OUTPUT_CLASSES = 3
+  // Flatten output and feed it into dense layer
+  model.add(tf.layers.flatten())
   model.add(
     tf.layers.dense({
-      units: NUM_OUTPUT_CLASSES,
+      units: 64,
+      kernelInitializer: 'varianceScaling',
+      activation: 'relu'
+    })
+  )
+
+  // Dropout to prevent overfitting
+  model.add(tf.layers.dropout({ rate: 0.5 }))
+
+  // Output layer
+  model.add(
+    tf.layers.dense({
+      units: NUM_CLASSES,
       kernelInitializer: 'varianceScaling',
       activation: 'softmax'
     })
   )
 
-  const optimizer = tf.train.adam()
+  const optimizer = tf.train.adam(0.0001)
   model.compile({
     optimizer: optimizer,
     loss: 'categoricalCrossentropy',
@@ -322,7 +362,7 @@ function App() {
       </header>
 
       <div className="Main">
-        <section>
+        <section className="flex flex-col items-center justify-center">
           <p>
             We'll be working with a fun dataset for the classic game, "Rock Paper Scissors",
             provided here:{' '}
@@ -343,8 +383,8 @@ function App() {
           </div>
         </section>
 
-        <section>
-          <p>
+        <section className="flex flex-col items-center justify-center gap-4 mb-6">
+          <p className="my-4 text-center">
             You now create the structure for the data, that hopefully works best.{' '}
             <strong>In this situation, an advanced model is a bad choice.</strong>{' '}
             An advanced model will train slower while overfitting this small and simple training data.
@@ -366,7 +406,7 @@ function App() {
                 </div>
                 <DisclosurePanel className="code-panel">
                   <Editor
-                    height="400px"
+                    height="600px"
                     defaultLanguage="javascript"
                     theme="vs-dark"
                     value={simpleModelCode}
@@ -381,7 +421,7 @@ function App() {
               </Disclosure>
             </div>
 
-            <p>OR</p>
+            <p className="my-4 text-center">OR</p>
 
             <div className="button-group">
               <Disclosure as="div" className="code-disclosure">
@@ -398,7 +438,7 @@ function App() {
                 </div>
                 <DisclosurePanel className="code-panel">
                   <Editor
-                    height="400px"
+                    height="600px"
                     defaultLanguage="javascript"
                     theme="vs-dark"
                     value={advancedModelCode}
@@ -423,7 +463,7 @@ function App() {
             </button>
           </div>
 
-          <p>
+          <p className="my-4 text-center">
             Train your Model with your training data. In this case 2100 labeled images,
             over and over... but not <em>toooooo much.</em>
           </p>
@@ -438,9 +478,9 @@ function App() {
           </div>
         </section>
 
-        <section>
-          <h3>Test with Webcam</h3>
-          <p>Try out your trained model with your webcam!</p>
+        <section className="flex flex-col items-center justify-center">
+          <h3 className="my-4 text-center">Test with Webcam</h3>
+          <p className="my-4 text-center">Try out your trained model with your webcam!</p>
           
           <div className="GroupUp">
             <button 
