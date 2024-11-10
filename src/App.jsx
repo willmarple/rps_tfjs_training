@@ -376,6 +376,13 @@ function App() {
           </p>
           <img src="./rps.jpg" alt="Rock Paper Scissors dataset" />
 
+          <p>
+            We'll show progress in the TensorFlow.js Vis panel. You'll see it
+            when you click the load and show button below. Press{" "}
+            <span className="cod">`</span> or <span className="cod">~</span> key
+            to hide this menu.
+          </p>
+
           <div className="GroupUp">
             <button className="btn-3d blue" onClick={handleLoadData}>
               {loadDataMessage}
@@ -384,10 +391,31 @@ function App() {
         </section>
 
         <section className="flex flex-col items-center justify-center gap-4 mb-6">
-          <p className="my-4 text-center">
-            You now create the structure for the data, that hopefully works best.{' '}
-            <strong>In this situation, an advanced model is a bad choice.</strong>{' '}
-            An advanced model will train slower while overfitting this small and simple training data.
+        <p>
+            Each of the examples have been loaded now. Due to this being a
+            browser, the data is loaded with one{" "}
+            <a href="./data.png" target="_blank" rel="noopener noreferrer">
+              sprite-sheet
+            </a>{" "}
+            to get around sandboxing. My code to create sprite-sheets is
+            available with{" "}
+            <a
+              href="https://github.com/GantMan/rps_tfjs_demo"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              this repo on GitHub
+            </a>
+            .
+          </p>
+          <p>
+            You now create the structure for the data, that hopefully works
+            best.{" "}
+            <strong>
+              In this situation, an advanced model is a bad choice.
+            </strong>{" "}
+            An advanced model will train slower while overfitting this small and
+            simple training data.
           </p>
 
           <div className="model-selection">
@@ -476,6 +504,67 @@ function App() {
               Train Your {currentModel} Model
             </button>
           </div>
+        </section>
+
+        <section className="flex flex-col items-center justify-center gap-4 mb-6">
+        <div>
+            Now that our model has seen some stuff{" "}
+            <span role="img" aria-label="woah">
+              😳
+            </span>
+            <hr />
+            It should be smarter at identifying RPS! We can now test it with 420
+            RPS images it's never seen before.
+          </div>
+          <button
+            className="btn-3d blue"
+            onClick={async () => {
+              // stop errors
+              if (!this.data) return;
+              if (!this.model) return;
+              await showAccuracy(this.model, this.data, "Trained Accuracy");
+              await showConfusion(
+                this.model,
+                this.data,
+                "Trained Confusion Matrix"
+              );
+            }}
+          >
+            Check Model After Training
+          </button>
+          <p>
+            We can now save our trained model! We can store it via downloading
+            it, uploading it, or place the results in localstorage for access of
+            the browser.
+          </p>
+          <p>
+            The simple model size comes out to about 48Kb, but some models can
+            be as large as 20+MBs! It depends how simple you keep the model. If
+            you want the model trained above, you get two files by{" "}
+            <a
+              className="pointy"
+              onClick={async () => {
+                if (!this.model) return;
+                await this.model.save("downloads://rps-model");
+              }}
+            >
+              clicking here
+            </a>
+            . The <span className="cod">model.json</span> file demonstrates the
+            structure of the model, and the weights are our non-random trained
+            values that make the model accurate.
+          </p>
+          <h3>Now let's see if we can test our model with the real world!</h3>
+          <img src="./rps_webcam_big.jpg" className="demo" alt="webcam demo" />
+          <p>
+            Keep in mind, the training data for this model had no background,
+            and the model itself isn't practiced in dealing with noise and
+            rotation. A more advanced model would do better, but for this demo
+            you shouldn't have any problems getting consistent and accurate
+            results. When testing on a webcam, you'll need to make the images as
+            clean as you can. Every few seconds your webcam image will be
+            converted to a 64x64 grayscale image for your model to classify.
+          </p>
         </section>
 
         <section className="flex flex-col items-center justify-center">
