@@ -130,6 +130,8 @@ export const getAdvancedModel = () => {
 
 // Constants
 const DETECTION_PERIOD = 2000
+const WEBCAM_WIDTH = 640
+const WEBCAM_HEIGHT = 480
 
 function App() {
   // State management
@@ -139,6 +141,9 @@ function App() {
   const [advancedDemo, setAdvancedDemo] = useState(false)
   const [loadDataMessage, setLoadDataMessage] = useState('Load and Show Examples')
   const [isVisorOpen, setIsVisorOpen] = useState(false)
+  const [prediction, setPrediction] = useState(null)
+  const [isDetecting, setIsDetecting] = useState(false)
+  const detectionInterval = useRef(null)
 
   // Refs
   const webcamRef = useRef(null)
@@ -251,6 +256,55 @@ function App() {
     tfvis.visor().open()
     await showExamples(data)
     setLoadDataMessage('Data Loaded!')
+  }, [])
+
+  const handleToggleWebcam = useCallback(() => {
+    if (webcamActive) {
+      // Stop detection if running
+      if (detectionInterval.current) {
+        clearInterval(detectionInterval.current)
+        setIsDetecting(false)
+      }
+      setWebcamActive(false)
+      setCamMessage('')
+    } else {
+      setWebcamActive(true)
+      setCamMessage('Loading webcam...')
+    }
+  }, [webcamActive])
+
+  const handleStartDetection = useCallback(() => {
+    if (!modelRef.current) {
+      alert('Please train a model first!')
+      return
+    }
+
+    if (isDetecting) {
+      clearInterval(detectionInterval.current)
+      setIsDetecting(false)
+      return
+    }
+
+    setIsDetecting(true)
+    detectionInterval.current = setInterval(async () => {
+      if (webcamRef.current) {
+        const predictions = await doSinglePrediction(modelRef.current, webcamRef.current.video)
+        // Assuming predictions is an array of {className, probability}
+        // Find the prediction with highest probability
+        const topPrediction = predictions.reduce((prev, current) => 
+          (current.probability > prev.probability) ? current : prev
+        )
+        setPrediction(topPrediction)
+      }
+    }, DETECTION_PERIOD)
+  }, [isDetecting])
+
+  useEffect(() => {
+    return () => {
+      if (detectionInterval.current) {
+        clearInterval(detectionInterval.current)
+      }
+    }
   }, [])
 
   return (
@@ -381,6 +435,55 @@ function App() {
             >
               Train Your {currentModel} Model
             </button>
+          </div>
+        </section>
+
+        <section>
+          <h3>Test with Webcam</h3>
+          <p>Try out your trained model with your webcam!</p>
+          
+          <div className="GroupUp">
+            <button 
+              className="btn-3d blue" 
+              onClick={handleToggleWebcam}
+            >
+              {webcamActive ? 'Disable Webcam' : 'Enable Webcam'}
+            </button>
+            
+            {webcamActive && (
+              <button 
+                className="btn-3d blue"
+                onClick={handleStartDetection}
+              >
+                {isDetecting ? 'Stop Detection' : 'Start Detection'}
+              </button>
+            )}
+          </div>
+
+          <div className="webcam-container">
+            {webcamActive && (
+              <>
+                <Webcam
+                  ref={webcamRef}
+                  audio={false}
+                  screenshotFormat="image/jpeg"
+                  videoConstraints={{
+                    width: WEBCAM_WIDTH,
+                    height: WEBCAM_HEIGHT,
+                    facingMode: 'user'
+                  }}
+                  width={WEBCAM_WIDTH}
+                  height={WEBCAM_HEIGHT}
+                  onUserMedia={() => setCamMessage('')}
+                />
+                {prediction && (
+                  <div className="prediction">
+                    {prediction.className}: {(prediction.probability * 100).toFixed(2)}%
+                  </div>
+                )}
+              </>
+            )}
+            {camMessage && <div className="cam-message">{camMessage}</div>}
           </div>
         </section>
       </div>
