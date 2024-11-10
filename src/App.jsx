@@ -521,7 +521,8 @@ function App() {
             It should be smarter at identifying RPS! We can now test it with 420
             RPS images it's never seen before.
           </div>
-          <button
+          {/* We don't need this button for now, as tfjs vis already shows the accuracy and confusion matrix */}
+          {/* <button
             className="btn-3d blue"
             onClick={async () => {
               // stop errors
@@ -536,7 +537,7 @@ function App() {
             }}
           >
             Check Model After Training
-          </button>
+          </button> */}
           <p>
             We can now save our trained model! We can store it via downloading
             it, uploading it, or place the results in localstorage for access of
