@@ -26,10 +26,6 @@ import {
   TEST_BATCH_SIZE
 } from './tfjs/constants'
 
-// Set up WebGL backend before any TF operations
-await tf.setBackend('webgl')
-console.log('Using backend:', tf.getBackend())
-
 const simpleModelCode = `
 export const getSimpleModel = () => {
   const model = tf.sequential()
@@ -199,6 +195,15 @@ function App() {
     // Initialize tfvis in a closed state
     const visor = tfvis.visor()
     visor.close()
+  }, [])
+
+  // Add useEffect to handle backend initialization
+  useEffect(() => {
+    const initTF = async () => {
+      await tf.setBackend('webgl')
+      console.log('Using backend:', tf.getBackend())
+    }
+    initTF()
   }, [])
 
   // Handlers
