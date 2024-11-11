@@ -7,61 +7,48 @@ import {
 } from './constants'
 
 export const getAdvancedModel = () => {
-  const model = tf.sequential({
-    name: 'advancedModel'
-  })
+  const model = tf.sequential()
 
-  // First conv layer
   model.add(
     tf.layers.conv2d({
       inputShape: [IMAGE_WIDTH, IMAGE_HEIGHT, NUM_CHANNELS],
       kernelSize: 3,
+      padding: 'same',
       filters: 32,
       strides: 1,
       activation: 'relu',
       kernelInitializer: 'varianceScaling'
     })
   )
-  model.add(tf.layers.maxPooling2d({ poolSize: [2, 2], strides: [2, 2] }))
 
-  // Second conv layer
+  model.add(tf.layers.maxPooling2d({ poolSize: [2, 2], strides: [2, 2] }))
+  model.add(tf.layers.batchNormalization())
+  model.add(tf.layers.dropout({ rate: 0.25 }))
+
   model.add(
     tf.layers.conv2d({
       kernelSize: 3,
       filters: 64,
+      padding: 'same',
       strides: 1,
       activation: 'relu',
       kernelInitializer: 'varianceScaling'
     })
   )
   model.add(tf.layers.maxPooling2d({ poolSize: [2, 2], strides: [2, 2] }))
+  model.add(tf.layers.batchNormalization())
+  model.add(tf.layers.dropout({ rate: 0.25 }))
 
-  // Third conv layer
-  model.add(
-    tf.layers.conv2d({
-      kernelSize: 3,
-      filters: 128,
-      strides: 1,
-      activation: 'relu',
-      kernelInitializer: 'varianceScaling'
-    })
-  )
-  model.add(tf.layers.maxPooling2d({ poolSize: [2, 2], strides: [2, 2] }))
-
-  // Flatten output and feed it into dense layer
   model.add(tf.layers.flatten())
+
   model.add(
     tf.layers.dense({
-      units: 64,
-      kernelInitializer: 'varianceScaling',
+      units: 512,
+      kernelRegularizer: 'l1l2',
       activation: 'relu'
     })
   )
 
-  // Dropout to prevent overfitting
-  model.add(tf.layers.dropout({ rate: 0.5 }))
-
-  // Output layer
   model.add(
     tf.layers.dense({
       units: NUM_CLASSES,
@@ -70,7 +57,7 @@ export const getAdvancedModel = () => {
     })
   )
 
-  const optimizer = tf.train.adam(0.0001)
+  const optimizer = tf.train.adam()
   model.compile({
     optimizer: optimizer,
     loss: 'categoricalCrossentropy',
@@ -89,7 +76,7 @@ export const getSimpleModel = () => {
   // the convolution operation that takes place in this layer.
   model.add(
     tf.layers.conv2d({
-      inputShape: [IMAGE_WIDTH, IMAGE_HEIGHT, NUM_CHANNELS],
+      inputShape: [IMAGE_WIDTH, IMAGE_HEIGHT, 3],
       kernelSize: 5,
       filters: 8,
       strides: 1,

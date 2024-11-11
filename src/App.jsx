@@ -277,8 +277,8 @@ function App() {
     // Open the visor to show training progress
     tfvis.visor().open()
 
-    // Different number of epochs based on model type
-    const numEpochs = currentModel === 'Simple' ? 12 : 20
+    // Use 10 epochs for both models
+    const numEpochs = 10
 
     try {
       await train(modelRef.current, dataRef.current, numEpochs)

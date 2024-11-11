@@ -4,59 +4,52 @@ import {
   IMAGE_WIDTH,
   IMAGE_HEIGHT,
   NUM_CHANNELS,
-  BATCH_SIZE
+  NUM_TRAIN_ELEMENTS,
+  NUM_TEST_ELEMENTS
 } from './constants'
 
-export const train = async (model, data, numEpochs = 12) => {
-  const metrics = ['loss', 'val_loss', 'accuracy', 'val_accuracy']
+export const train = (model, data, numEpochs = 10) => {
+  const BATCH_SIZE = 10
+  
+  const metrics = ['loss', 'acc', 'val_acc']
   const container = {
     name: 'Model Training',
-    tab: 'Training',
-    styles: {
-      height: '1000px'
-    }
+    styles: { height: '1000px' }
   }
-  
   const fitCallbacks = tfvis.show.fitCallbacks(container, metrics)
+  tfvis.visor().setActiveTab('Visor')
 
-  // Get training batches with smaller batch size for advanced model
-  const TRAIN_BATCH_SIZE = model.name === 'advancedModel' ? 32 : BATCH_SIZE
-  const trainBatch = data.nextTrainBatch(TRAIN_BATCH_SIZE)
-  const validationBatch = data.nextTestBatch(TRAIN_BATCH_SIZE)
+  const [trainXs, trainYs] = tf.tidy(() => {
+    const d = data.nextTrainBatch(NUM_TRAIN_ELEMENTS)
+    return [
+      d.xs.reshape([
+        NUM_TRAIN_ELEMENTS,
+        IMAGE_HEIGHT,
+        IMAGE_WIDTH,
+        NUM_CHANNELS
+      ]),
+      d.labels
+    ]
+  })
 
-  try {
-    // Explicitly clean up any existing tensors
-    tf.engine().startScope()
-    
-    // Reshape the input tensors
-    const reshapedTrainXs = trainBatch.xs.reshape([
-      TRAIN_BATCH_SIZE,
-      IMAGE_WIDTH,
-      IMAGE_HEIGHT,
-      NUM_CHANNELS
-    ])
-    const reshapedValidationXs = validationBatch.xs.reshape([
-      TRAIN_BATCH_SIZE,
-      IMAGE_WIDTH,
-      IMAGE_HEIGHT,
-      NUM_CHANNELS
-    ])
+  const [testXs, testYs] = tf.tidy(() => {
+    const d = data.nextTestBatch(NUM_TEST_ELEMENTS)
+    return [
+      d.xs.reshape([
+        NUM_TEST_ELEMENTS,
+        IMAGE_HEIGHT,
+        IMAGE_WIDTH,
+        NUM_CHANNELS
+      ]),
+      d.labels
+    ]
+  })
 
-    // Start training
-    const history = await model.fit(reshapedTrainXs, trainBatch.labels, {
-      batchSize: TRAIN_BATCH_SIZE,
-      validationData: [reshapedValidationXs, validationBatch.labels],
-      epochs: numEpochs,
-      callbacks: fitCallbacks
-    })
-
-    return history
-  } finally {
-    // Clean up tensors
-    tf.engine().endScope()
-    trainBatch.xs.dispose()
-    trainBatch.labels.dispose()
-    validationBatch.xs.dispose()
-    validationBatch.labels.dispose()
-  }
+  return model.fit(trainXs, trainYs, {
+    batchSize: BATCH_SIZE,
+    validationData: [testXs, testYs],
+    epochs: numEpochs,
+    shuffle: true,
+    callbacks: fitCallbacks
+  })
 }
