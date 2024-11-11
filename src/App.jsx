@@ -243,13 +243,12 @@ function App() {
     }
 
     try {
-      // Make sure visor is open
       const visor = tfvis.visor()
       visor.open()
       setIsVisorOpen(true)
 
-      // Show confusion matrix and accuracy for untrained model
-      const testData = {
+      // Wrap test data creation in tf.tidy
+      const testData = tf.tidy(() => ({
         nextTestBatch: (batchSize) => {
           const batch = dataRef.current.nextTestBatch(batchSize)
           return {
@@ -257,7 +256,7 @@ function App() {
             labels: batch.labels
           }
         }
-      }
+      }))
 
       await showAccuracy(modelRef.current, testData)
       await showConfusion(modelRef.current, testData)
@@ -294,10 +293,13 @@ function App() {
 
   const handleLoadData = useCallback(async () => {
     setLoadDataMessage('Loading 10MB Data')
-    const data = new RPSDataset()
+    // Wrap data loading in tf.tidy
+    const data = await tf.tidy(() => {
+      const dataset = new RPSDataset()
+      return dataset
+    })
     dataRef.current = data
     await data.load()
-    // Make sure the visor is open before showing examples
     tfvis.visor().open()
     await showExamples(data)
     setLoadDataMessage('Data Loaded!')
@@ -333,8 +335,10 @@ function App() {
     setIsDetecting(true)
     detectionInterval.current = setInterval(async () => {
       if (webcamRef.current) {
-        const predictions = await doSinglePrediction(modelRef.current, webcamRef.current.video)
-        // Assuming predictions is an array of {className, probability}
+        // Wrap prediction in tf.tidy to clean up tensors
+        const predictions = await tf.tidy(() => 
+          doSinglePrediction(modelRef.current, webcamRef.current.video)
+        )
         // Find the prediction with highest probability
         const topPrediction = predictions.reduce((prev, current) => 
           (current.probability > prev.probability) ? current : prev
