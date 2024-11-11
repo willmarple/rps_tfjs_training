@@ -8,48 +8,82 @@ import {
   NUM_TEST_ELEMENTS
 } from './constants'
 
-export const train = (model, data, numEpochs = 10) => {
-  const BATCH_SIZE = 10
-  
-  const metrics = ['loss', 'acc', 'val_acc']
-  const container = {
-    name: 'Model Training',
-    styles: { height: '1000px' }
+// Add a custom callback that stops training when accuracy threshold is met
+class EarlyStoppingCallback extends tf.Callback {
+  constructor(targetAccuracy = 0.95) {
+    super();
+    this.targetAccuracy = targetAccuracy;
+    this.shouldStop = false;
   }
-  const fitCallbacks = tfvis.show.fitCallbacks(container, metrics)
-  tfvis.visor().setActiveTab('Visor')
 
-  const [trainXs, trainYs] = tf.tidy(() => {
-    const d = data.nextTrainBatch(NUM_TRAIN_ELEMENTS)
-    return [
-      d.xs.reshape([
-        NUM_TRAIN_ELEMENTS,
-        IMAGE_HEIGHT,
-        IMAGE_WIDTH,
-        NUM_CHANNELS
-      ]),
-      d.labels
-    ]
-  })
+  async onTrainBegin(logs) {
+    this.shouldStop = false;
+  }
 
-  const [testXs, testYs] = tf.tidy(() => {
-    const d = data.nextTestBatch(NUM_TEST_ELEMENTS)
-    return [
-      d.xs.reshape([
-        NUM_TEST_ELEMENTS,
-        IMAGE_HEIGHT,
-        IMAGE_WIDTH,
-        NUM_CHANNELS
-      ]),
-      d.labels
-    ]
-  })
+  async onEpochEnd(epoch, logs) {
+    const accuracy = logs.acc || logs.accuracy;
+    if (accuracy) {
+      console.log(`Epoch ${epoch + 1}: accuracy = ${(accuracy * 100).toFixed(2)}%`);
+      
+      if (accuracy >= this.targetAccuracy) {
+        console.log(`\nTarget accuracy of ${(this.targetAccuracy * 100).toFixed(2)}% reached!`);
+        this.shouldStop = true;
+        this.params.model.stopTraining = true;
+        // Attempt to clean up tensors and stop computation
+        tf.engine().endScope();
+        tf.engine().startScope();
+      }
+    }
+  }
 
-  return model.fit(trainXs, trainYs, {
-    batchSize: BATCH_SIZE,
-    validationData: [testXs, testYs],
-    epochs: numEpochs,
-    shuffle: true,
-    callbacks: fitCallbacks
-  })
+  async onBatchEnd(batch, logs) {
+    if (this.shouldStop) {
+      this.params.model.stopTraining = true;
+      return false;
+    }
+  }
 }
+
+export const train = async (model, data, numEpochs) => {
+  const metrics = ['loss', 'val_loss', 'acc', 'val_acc'];
+  const container = { name: 'Model Training', tab: 'Training' };
+  const fitCallbacks = tfvis.show.fitCallbacks(container, metrics);
+
+  const BATCH_SIZE = 32;
+  const TARGET_ACCURACY = 0.95;
+
+  const trainData = {
+    xs: tf.tensor4d(data.trainImages, [data.trainIndices.length, 64, 64, 3]),
+    labels: tf.tensor2d(data.trainLabels, [data.trainIndices.length, 3])
+  };
+
+  const testData = {
+    xs: tf.tensor4d(data.testImages, [data.testIndices.length, 64, 64, 3]),
+    labels: tf.tensor2d(data.testLabels, [data.testIndices.length, 3])
+  };
+
+  for (let epoch = 0; epoch < numEpochs; epoch++) {
+    const result = await model.evaluate(trainData.xs, trainData.labels);
+    const accuracy = result[1].dataSync()[0];
+    
+    console.log(`Epoch ${epoch + 1}: accuracy = ${(accuracy * 100).toFixed(2)}%`);
+
+    if (accuracy >= TARGET_ACCURACY) {
+      console.log(`\nReached target accuracy of ${(TARGET_ACCURACY * 100).toFixed(2)}%. Stopping training.`);
+      break;
+    }
+
+    await model.fit(trainData.xs, trainData.labels, {
+      batchSize: BATCH_SIZE,
+      epochs: 1,
+      validationData: [testData.xs, testData.labels],
+      callbacks: [fitCallbacks]
+    });
+  }
+
+  // Clean up tensors
+  trainData.xs.dispose();
+  trainData.labels.dispose();
+  testData.xs.dispose();
+  testData.labels.dispose();
+};
