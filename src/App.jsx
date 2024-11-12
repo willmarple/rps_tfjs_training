@@ -5,7 +5,7 @@ import * as tf from '@tensorflow/tfjs'
 import '@tensorflow/tfjs-backend-webgl'
 import Editor from '@monaco-editor/react'
 import { RPSDataset } from './tfjs/data.js'
-import { getAdvancedModel, getSimpleModel } from './tfjs/models.js'
+import { getModel } from './tfjs/models.js'
 import { train } from './tfjs/train.js'
 import {
   showAccuracy,
@@ -22,147 +22,9 @@ import {
   IMAGE_WIDTH,
   IMAGE_HEIGHT,
   NUM_CHANNELS,
-  NUM_CLASSES,
-  TEST_BATCH_SIZE
 } from './tfjs/constants'
 
-const simpleModelCode = `
-export const getSimpleModel = () => {
-  const model = tf.sequential()
-
-  // In the first layer of out convolutional neural network we have
-  // to specify the input shape. Then we specify some parameters for
-  // the convolution operation that takes place in this layer.
-  model.add(
-    tf.layers.conv2d({
-      inputShape: [IMAGE_WIDTH, IMAGE_HEIGHT, NUM_CHANNELS],
-      kernelSize: 5,
-      filters: 8,
-      strides: 1,
-      activation: 'relu',
-      kernelInitializer: 'varianceScaling'
-    })
-  )
-
-  // The MaxPooling layer acts as a sort of downsampling using max values
-  // in a region instead of averaging.
-  model.add(tf.layers.maxPooling2d({ poolSize: [2, 2], strides: [2, 2] }))
-
-  // Repeat another conv2d + maxPooling stack.
-  // Note that we have more filters in the convolution.
-  model.add(
-    tf.layers.conv2d({
-      kernelSize: 5,
-      filters: 16,
-      strides: 1,
-      activation: 'relu',
-      kernelInitializer: 'varianceScaling'
-    })
-  )
-  model.add(tf.layers.maxPooling2d({ poolSize: [2, 2], strides: [2, 2] }))
-
-  // Now we flatten the output from the 2D filters into a 1D vector to prepare
-  // it for input into our last layer. This is common practice when feeding
-  // higher dimensional data to a final classification output layer.
-  model.add(tf.layers.flatten())
-
-  // Our last layer is a dense layer which has 3 output units, one for each
-  // output class (i.e. 0, 1, 2).
-  const NUM_OUTPUT_CLASSES = 3
-  model.add(
-    tf.layers.dense({
-      units: NUM_OUTPUT_CLASSES,
-      kernelInitializer: 'varianceScaling',
-      activation: 'softmax'
-    })
-  )
-
-  // Choose an optimizer, loss function and accuracy metric,
-  // then compile and return the model
-  const optimizer = tf.train.adam()
-  model.compile({
-    optimizer: optimizer,
-    loss: 'categoricalCrossentropy',
-    metrics: ['accuracy']
-  })
-
-  return model
-}`
-
-const advancedModelCode = `
-export const getAdvancedModel = () => {
-  const model = tf.sequential({
-    name: 'advancedModel'
-  })
-
-  // First conv layer
-  model.add(
-    tf.layers.conv2d({
-      inputShape: [IMAGE_WIDTH, IMAGE_HEIGHT, NUM_CHANNELS],
-      kernelSize: 3,
-      filters: 32,
-      strides: 1,
-      activation: 'relu',
-      kernelInitializer: 'varianceScaling'
-    })
-  )
-  model.add(tf.layers.maxPooling2d({ poolSize: [2, 2], strides: [2, 2] }))
-
-  // Second conv layer
-  model.add(
-    tf.layers.conv2d({
-      kernelSize: 3,
-      filters: 64,
-      strides: 1,
-      activation: 'relu',
-      kernelInitializer: 'varianceScaling'
-    })
-  )
-  model.add(tf.layers.maxPooling2d({ poolSize: [2, 2], strides: [2, 2] }))
-
-  // Third conv layer
-  model.add(
-    tf.layers.conv2d({
-      kernelSize: 3,
-      filters: 128,
-      strides: 1,
-      activation: 'relu',
-      kernelInitializer: 'varianceScaling'
-    })
-  )
-  model.add(tf.layers.maxPooling2d({ poolSize: [2, 2], strides: [2, 2] }))
-
-  // Flatten output and feed it into dense layer
-  model.add(tf.layers.flatten())
-  model.add(
-    tf.layers.dense({
-      units: 64,
-      kernelInitializer: 'varianceScaling',
-      activation: 'relu'
-    })
-  )
-
-  // Dropout to prevent overfitting
-  model.add(tf.layers.dropout({ rate: 0.5 }))
-
-  // Output layer
-  model.add(
-    tf.layers.dense({
-      units: NUM_CLASSES,
-      kernelInitializer: 'varianceScaling',
-      activation: 'softmax'
-    })
-  )
-
-  const optimizer = tf.train.adam(0.0001)
-  model.compile({
-    optimizer: optimizer,
-    loss: 'categoricalCrossentropy',
-    metrics: ['accuracy']
-  })
-
-  return model
-}`
+import { modelCode, loadDataAndShowExamples, trainModel, checkUntrainedModel } from './tfjs/examples'
 
 // Constants
 const DETECTION_PERIOD = 2000
@@ -174,7 +36,6 @@ function App() {
   const [currentModel, setCurrentModel] = useState(null)
   const [webcamActive, setWebcamActive] = useState(false)
   const [camMessage, setCamMessage] = useState('')
-  const [advancedDemo, setAdvancedDemo] = useState(false)
   const [loadDataMessage, setLoadDataMessage] = useState('Load and Show Examples')
   const [isVisorOpen, setIsVisorOpen] = useState(false)
   const [prediction, setPrediction] = useState(null)
@@ -209,7 +70,7 @@ function App() {
   // Handlers
   const handleCreateSimpleModel = useCallback(async () => {
     setCurrentModel('Simple')
-    const model = getSimpleModel()
+    const model = getModel()
     // Make sure the visor is open when showing model summary
     tfvis.visor().open()
     // Show the model summary
@@ -218,22 +79,6 @@ function App() {
       model
     )
     modelRef.current = model
-  }, [])
-
-  const handleCreateAdvancedModel = useCallback(() => {
-    // Create model
-    modelRef.current = getAdvancedModel()
-    setCurrentModel('Advanced')
-
-    // Show model summary in visor
-    const visor = tfvis.visor()
-    visor.open()
-    setIsVisorOpen(true)
-    
-    tfvis.show.modelSummary(
-      { name: 'Advanced Model Architecture', tab: 'Model' },
-      modelRef.current
-    )
   }, [])
 
   const handleCheckUntrainedModel = useCallback(async () => {
@@ -336,11 +181,11 @@ function App() {
     detectionInterval.current = setInterval(async () => {
       if (webcamRef.current) {
         // Wrap prediction in tf.tidy to clean up tensors
-        const predictions = await tf.tidy(() => 
+        const predictions = await tf.tidy(() =>
           doSinglePrediction(modelRef.current, webcamRef.current.video)
         )
         // Find the prediction with highest probability
-        const topPrediction = predictions.reduce((prev, current) => 
+        const topPrediction = predictions.reduce((prev, current) =>
           (current.probability > prev.probability) ? current : prev
         )
         setPrediction(topPrediction)
@@ -393,14 +238,36 @@ function App() {
           </p>
 
           <div className="GroupUp">
-            <button className="btn-3d blue" onClick={handleLoadData}>
-              {loadDataMessage}
-            </button>
+            <Disclosure as="div" className="code-disclosure">
+              <div className="mb-2">
+                <button className="btn-3d blue" onClick={handleLoadData}>
+                  {loadDataMessage}
+                </button>
+                <DisclosureButton className="btn-3d green">
+                  <strong>&lt;/&gt;</strong>
+                </DisclosureButton>
+              </div>
+              <DisclosurePanel className="code-panel">
+                <Editor
+                  width="800px"
+                  height="600px"
+                  defaultLanguage="javascript"
+                  theme="vs-dark"
+                  value={loadDataAndShowExamples}
+                  options={{
+                    readOnly: true,
+                    minimap: { enabled: false },
+                    scrollBeyondLastLine: false,
+                    fontSize: 14
+                  }}
+                />
+              </DisclosurePanel>
+            </Disclosure>
           </div>
         </section>
 
         <section className="flex flex-col items-center justify-center gap-4 mb-6">
-        <p>
+          <p>
             Each of the examples have been loaded now. Due to this being a
             browser, the data is loaded with one{" "}
             <a href="./data.png" target="_blank" rel="noopener noreferrer">
@@ -435,7 +302,7 @@ function App() {
                     className={`btn-3d blue ${currentModel === 'Simple' ? 'activeModel' : ''}`}
                     onClick={handleCreateSimpleModel}
                   >
-                    Create Simple Model
+                    Create Model
                   </button>
                   <DisclosureButton className="btn-3d green">
                     <strong>&lt;/&gt;</strong>
@@ -443,42 +310,11 @@ function App() {
                 </div>
                 <DisclosurePanel className="code-panel">
                   <Editor
+                    width="800px"
                     height="600px"
                     defaultLanguage="javascript"
                     theme="vs-dark"
-                    value={simpleModelCode}
-                    options={{
-                      readOnly: true,
-                      minimap: { enabled: false },
-                      scrollBeyondLastLine: false,
-                      fontSize: 14
-                    }}
-                  />
-                </DisclosurePanel>
-              </Disclosure>
-            </div>
-
-            <p className="my-4 text-center">OR</p>
-
-            <div className="button-group">
-              <Disclosure as="div" className="code-disclosure">
-                <div className="mb-2">
-                  <button
-                    className={`btn-3d blue ${currentModel === 'Advanced' ? 'activeModel' : ''}`}
-                    onClick={handleCreateAdvancedModel}
-                  >
-                    Create Advanced Model
-                  </button>
-                  <DisclosureButton className="btn-3d green">
-                    <strong>&lt;/&gt;</strong>
-                  </DisclosureButton>
-                </div>
-                <DisclosurePanel className="code-panel">
-                  <Editor
-                    height="600px"
-                    defaultLanguage="javascript"
-                    theme="vs-dark"
-                    value={advancedModelCode}
+                    value={modelCode}
                     options={{
                       readOnly: true,
                       minimap: { enabled: false },
@@ -492,12 +328,35 @@ function App() {
           </div>
 
           <div className="GroupUp">
+            <Disclosure as="div" className="code-disclosure">
+              <div className="mb-2">
             <button
               className="btn-3d blue"
               onClick={handleCheckUntrainedModel}
             >
               Check Untrained Model Results
             </button>
+                <DisclosureButton className="btn-3d green">
+                  <strong>&lt;/&gt;</strong>
+                </DisclosureButton>
+              </div>
+              <DisclosurePanel className="code-panel">
+                <Editor
+                  width="800px"
+                  height="600px"
+                  defaultLanguage="javascript"
+                  theme="vs-dark"
+                  value={checkUntrainedModel}
+                  options={{
+                    readOnly: true,
+                    minimap: { enabled: false },
+                    scrollBeyondLastLine: false,
+                    fontSize: 14
+                  }}
+                />
+              </DisclosurePanel>
+            </Disclosure>
+
           </div>
 
           <p className="my-4 text-center">
@@ -506,17 +365,40 @@ function App() {
           </p>
 
           <div className="GroupUp">
-            <button
-              className="btn-3d blue"
-              onClick={handleTrainModel}
-            >
-              Train Your {currentModel} Model
-            </button>
+            <Disclosure as="div" className="code-disclosure">
+              <div className="mb-2">
+                <button
+                  className="btn-3d blue"
+                  onClick={handleTrainModel}
+                >
+                  Train Your Model
+                </button>
+                <DisclosureButton className="btn-3d green">
+                  <strong>&lt;/&gt;</strong>
+                </DisclosureButton>
+              </div>
+              <DisclosurePanel className="code-panel">
+                <Editor
+                  width="800px"
+                  height="600px"
+                  defaultLanguage="javascript"
+                  theme="vs-dark"
+                  value={trainModel}
+                  options={{
+                    readOnly: true,
+                    minimap: { enabled: false },
+                    scrollBeyondLastLine: false,
+                    fontSize: 14
+                  }}
+                />
+              </DisclosurePanel>
+            </Disclosure>
+
           </div>
         </section>
 
         <section className="flex flex-col items-center justify-center gap-4 mb-6">
-        <div>
+          <div>
             Now that our model has seen some stuff{" "}
             <span role="img" aria-label="woah">
               😳
@@ -525,23 +407,6 @@ function App() {
             It should be smarter at identifying RPS! We can now test it with 420
             RPS images it's never seen before.
           </div>
-          {/* We don't need this button for now, as tfjs vis already shows the accuracy and confusion matrix */}
-          {/* <button
-            className="btn-3d blue"
-            onClick={async () => {
-              // stop errors
-              if (!this.data) return;
-              if (!this.model) return;
-              await showAccuracy(this.model, this.data, "Trained Accuracy");
-              await showConfusion(
-                this.model,
-                this.data,
-                "Trained Confusion Matrix"
-              );
-            }}
-          >
-            Check Model After Training
-          </button> */}
           <p>
             We can now save our trained model! We can store it via downloading
             it, uploading it, or place the results in localstorage for access of
@@ -580,17 +445,17 @@ function App() {
         <section className="flex flex-col items-center justify-center">
           <h3 className="my-4 text-center">Test with Webcam</h3>
           <p className="my-4 text-center">Try out your trained model with your webcam!</p>
-          
+
           <div className="GroupUp">
-            <button 
-              className="btn-3d blue" 
+            <button
+              className="btn-3d blue"
               onClick={handleToggleWebcam}
             >
               {webcamActive ? 'Disable Webcam' : 'Enable Webcam'}
             </button>
-            
+
             {webcamActive && (
-              <button 
+              <button
                 className="btn-3d blue"
                 onClick={handleStartDetection}
               >

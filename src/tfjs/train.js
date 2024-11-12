@@ -1,48 +1,5 @@
 import * as tf from '@tensorflow/tfjs'
 import * as tfvis from '@tensorflow/tfjs-vis'
-import {
-  IMAGE_WIDTH,
-  IMAGE_HEIGHT,
-  NUM_CHANNELS,
-  NUM_TRAIN_ELEMENTS,
-  NUM_TEST_ELEMENTS
-} from './constants'
-
-// Add a custom callback that stops training when accuracy threshold is met
-class EarlyStoppingCallback extends tf.Callback {
-  constructor(targetAccuracy = 0.95) {
-    super();
-    this.targetAccuracy = targetAccuracy;
-    this.shouldStop = false;
-  }
-
-  async onTrainBegin(logs) {
-    this.shouldStop = false;
-  }
-
-  async onEpochEnd(epoch, logs) {
-    const accuracy = logs.acc || logs.accuracy;
-    if (accuracy) {
-      console.log(`Epoch ${epoch + 1}: accuracy = ${(accuracy * 100).toFixed(2)}%`);
-      
-      if (accuracy >= this.targetAccuracy) {
-        console.log(`\nTarget accuracy of ${(this.targetAccuracy * 100).toFixed(2)}% reached!`);
-        this.shouldStop = true;
-        this.params.model.stopTraining = true;
-        // Attempt to clean up tensors and stop computation
-        tf.engine().endScope();
-        tf.engine().startScope();
-      }
-    }
-  }
-
-  async onBatchEnd(batch, logs) {
-    if (this.shouldStop) {
-      this.params.model.stopTraining = true;
-      return false;
-    }
-  }
-}
 
 export const train = async (model, data, numEpochs) => {
   const metrics = ['loss', 'val_loss', 'acc', 'val_acc'];

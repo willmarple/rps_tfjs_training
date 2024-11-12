@@ -1,74 +1,11 @@
 import * as tf from '@tensorflow/tfjs'
 import {
   IMAGE_WIDTH,
-  IMAGE_HEIGHT,
-  NUM_CHANNELS,
-  NUM_CLASSES
+  IMAGE_HEIGHT
 } from './constants'
 
-export const getAdvancedModel = () => {
-  const model = tf.sequential()
-
-  model.add(
-    tf.layers.conv2d({
-      inputShape: [IMAGE_WIDTH, IMAGE_HEIGHT, NUM_CHANNELS],
-      kernelSize: 3,
-      padding: 'same',
-      filters: 32,
-      strides: 1,
-      activation: 'relu',
-      kernelInitializer: 'varianceScaling'
-    })
-  )
-
-  model.add(tf.layers.maxPooling2d({ poolSize: [2, 2], strides: [2, 2] }))
-  model.add(tf.layers.batchNormalization())
-  model.add(tf.layers.dropout({ rate: 0.25 }))
-
-  model.add(
-    tf.layers.conv2d({
-      kernelSize: 3,
-      filters: 64,
-      padding: 'same',
-      strides: 1,
-      activation: 'relu',
-      kernelInitializer: 'varianceScaling'
-    })
-  )
-  model.add(tf.layers.maxPooling2d({ poolSize: [2, 2], strides: [2, 2] }))
-  model.add(tf.layers.batchNormalization())
-  model.add(tf.layers.dropout({ rate: 0.25 }))
-
-  model.add(tf.layers.flatten())
-
-  model.add(
-    tf.layers.dense({
-      units: 512,
-      kernelRegularizer: 'l1l2',
-      activation: 'relu'
-    })
-  )
-
-  model.add(
-    tf.layers.dense({
-      units: NUM_CLASSES,
-      kernelInitializer: 'varianceScaling',
-      activation: 'softmax'
-    })
-  )
-
-  const optimizer = tf.train.adam()
-  model.compile({
-    optimizer: optimizer,
-    loss: 'categoricalCrossentropy',
-    metrics: ['accuracy']
-  })
-
-  return model
-}
-
 // The classic MNIST style model
-export const getSimpleModel = () => {
+export const getModel = () => {
   const model = tf.sequential()
 
   // In the first layer of out convolutional neural network we have
