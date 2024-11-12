@@ -419,7 +419,7 @@ function App() {
             className="btn-3d blue"
             onClick={openEvaluationTab}
           >
-            Show Trained Model Metrics
+            Show Trained Model Results
           </button>
         </section>
 
