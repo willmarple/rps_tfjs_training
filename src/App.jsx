@@ -130,6 +130,9 @@ function App() {
       // After training, show the updated metrics
       await showAccuracy(modelRef.current, dataRef.current, 'Trained Accuracy')
       await showConfusion(modelRef.current, dataRef.current, 'Trained Confusion Matrix')
+
+      // Switch back to the tab that was active during training
+      tfvis.visor().setActiveTab('Training')
     } catch (error) {
       console.error('Training failed:', error)
       alert('Training failed. Check console for details.')
