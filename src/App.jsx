@@ -82,6 +82,23 @@ function App() {
     modelRef.current = model
   }, [])
 
+  const openEvaluationTab = () => {
+    if (!modelRef.current || !dataRef.current) {
+      alert('Please create a model and load data first')
+      return
+    }
+
+    try {
+      const visor = tfvis.visor()
+      visor.open()
+      setIsVisorOpen(true)
+      tfvis.visor().setActiveTab('Evaluation')
+    } catch (error) {
+      console.error('Error opening evaluation tab:', error)
+      alert('Error opening evaluation tab: ' + error.message)
+    }
+  }
+
   const handleCheckUntrainedModel = useCallback(async () => {
     if (!modelRef.current || !dataRef.current) {
       alert('Please create a model and load data first')
@@ -334,12 +351,12 @@ function App() {
           <div className="GroupUp">
             <Disclosure as="div" className="code-disclosure">
               <div className="mb-2">
-            <button
-              className="btn-3d blue"
-              onClick={handleCheckUntrainedModel}
-            >
-              Check Untrained Model Results
-            </button>
+                <button
+                  className="btn-3d blue"
+                  onClick={handleCheckUntrainedModel}
+                >
+                  Check Untrained Model Results
+                </button>
                 <DisclosureButton className="btn-3d green">
                   <strong>&lt;/&gt;</strong>
                 </DisclosureButton>
@@ -397,8 +414,13 @@ function App() {
                 />
               </DisclosurePanel>
             </Disclosure>
-
           </div>
+          <button
+            className="btn-3d blue"
+            onClick={openEvaluationTab}
+          >
+            Show Trained Model Metrics
+          </button>
         </section>
 
         <section className="flex flex-col items-center justify-center gap-4 mb-6">
