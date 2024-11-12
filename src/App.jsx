@@ -41,6 +41,7 @@ function App() {
   const [prediction, setPrediction] = useState(null)
   const [isDetecting, setIsDetecting] = useState(false)
   const detectionInterval = useRef(null)
+  const [advancedDemo, setAdvancedDemo] = useState(false)
 
   // Refs
   const webcamRef = useRef(null)
@@ -279,7 +280,7 @@ function App() {
             to get around sandboxing. My code to create sprite-sheets is
             available with{" "}
             <a
-              href="https://github.com/GantMan/rps_tfjs_demo"
+              href="https://github.com/willmarple/rps_tfjs_training"
               target="_blank"
               rel="noopener noreferrer"
             >
@@ -492,6 +493,38 @@ function App() {
             )}
             {camMessage && <div className="cam-message">{camMessage}</div>}
           </div>
+        </section>
+
+        <section className="flex flex-col items-center justify-center gap-4 mb-6">
+          <p>
+            Machine Learning is exciting! And now you're part of it, as you
+            trained a model right in your browser. We've only scratched the
+            surface of what you can build. Automating with ML on computers is
+            only limited by our imagination!
+          </p>
+          <p>
+            What does it look like to train a far more advanced model for hours
+            that results in a 20+MB model? Here's an opportunity for you to try
+            it yourself! This model isn't as diverse, but for demo purposes it's
+            inspiring!
+          </p>
+          <div className="GroupUp">
+            <button
+              className="btn-3d blue"
+              onClick={() => {
+                setWebcamActive(false)
+                setAdvancedDemo(!advancedDemo)
+              }}
+            >
+              {advancedDemo ? "Turn Off Advanced Demo" : "Show Advanced Demo"}
+            </button>
+          </div>
+          {advancedDemo && (
+            <div>
+              <AdvancedModel key="advancedDemo" />
+              <p>Turn off ad-block where applicable</p>
+            </div>
+          )}
         </section>
       </div>
       <div className="GroupUp">
